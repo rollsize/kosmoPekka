@@ -1,20 +1,19 @@
 from aiogram import Bot, types
-from aiogram.types import Message, Update, ReplyKeyboardMarkup, KeyboardButton
+from aiogram.types import Message, ParseMode
 from aiogram.dispatcher import Dispatcher
-from aiogram.utils import executor, exceptions
+from aiogram.utils import executor
+from aiogram.utils.markdown import text, bold, italic, code
 import logging
 import os
 import random
 import json
 try:
     import config as cfg
-except ModuleNotFoundError:
-    raise ModuleNotFoundError("[ERROR] No config.py file in the directory")
-try:
+    import keyboards as kb
     import messages as msg
 except ModuleNotFoundError:
-    raise ModuleNotFoundError("[ERROR] No messages.py file in the directory")
-# Сделать команды на основные кнопки
+    raise
+
 bot = Bot(token=cfg.token)
 dp = Dispatcher(bot)
 logging.basicConfig(level=logging.INFO)
@@ -30,35 +29,54 @@ else:
 #==== End ====
 async def save_json_file(data: dict):
     with open("users.json", "w", encoding="UTF-8") as file:
-        json.dump(data, file, sort_keys=False, ensure_ascii=False)
+         json.dump(data, file, sort_keys=False, ensure_ascii=False)
 
-@dp.errors_handler(exception=exceptions.BotBlocked)
-async def error_bot_blocked(update: types.Update, exception: exceptions.BotBlocked):
-    print(update)
-    print(f"[WARNING]User blocked me!\Message: {update}\nОшибка: {exception}")
-    return True
+@dp.message_handler(lambda message: message.text == "Меню")
+async def show_menu(message: types.Message):
+    await message.answer(text(bold("Меню\n"), "Выберите действие:"), reply_markup=kb.menu_inkb, parse_mode=ParseMode.MARKDOWN)
+
+@dp.message_handler(lambda message: message.text == "Инвентарь")
+async def show_inventory(message: types.Message):
+
+    txt = users[str(message.from_user.id)]["inventory"][key for key in 
+    await message.answer(text(bold("В твоих карманах сейчас:")), reply_markup=kb.inv_inkb)
+
+@dp.message_handler(lambda message: message.text == "Инфо")
+async def show_info(message: types.Message):
+    await message.answer("Рисую Инфо")
 
 @dp.message_handler(commands=["start"])
-async def welcome_message(message: types.Message):
+async def start_message(message: types.Message):
     if not message.from_user.id in users:
         users[str(message.from_user.id)] = {"first_name": message.from_user["first_name"], "last_name": message.from_user["last_name"], "inventory": {key: None for key in range(0, 6)}}
-        await save_json_file(users) 
-    welcome_keyboard = ReplyKeyboardMarkup(resize_keyboard=True, row_width=2)
-    kb_keys = []
-    kb_keys.append(KeyboardButton(text="Меню", call_data="Menu"))
-    kb_keys.append(KeyboardButton(text="Инвентарь", call_data="Invent"))
-    kb_keys.append(KeyboardButton(text="Инфо", call_data="Info"))
-    welcome_keyboard.add(*kb_keys)
-    await message.answer(msg.first_message, reply_markup=welcome_keyboard)
+        save_json_file(users)
+    await message.answer(msg.first_message, reply_markup=kb.main_kb)
 
 @dp.message_handler(commands=["help"])
-async def credits(message: types.Message):
+async def help_message(message: types.Message):
     await message.answer(msg.contact_us)
 
-@dp.callback_query_handler(lambda call:True)
-async def callback_worker(call):
-    if call.data == "Menu":
-        await message.answer("You picked 'Yes'")
+@dp.message_handler(commands=["rkm"])
+async def markup_main_kb(message: types.Message):
+    await message.reply("Нарисовал кнопки, чтоб было удобнее. Удалить - /rm", reply_markup=kb.main_kb)
+
+@dp.message_handler(commands=["rm"])
+async def remove_main_kb(message: types.Message):
+    await message.reply("Убираю главное меню. Вернуть - /rkm", reply_markup=kb.ReplyKeyboardRemove())
+
+@dp.callback_query_handler()
+async def callback_worker(call: types.CallbackQuery):
+    if call.data == "menu":
+        await call.message.answer("Menu button")
+    elif call.data == "inventory":
+        await call.message.answer("Inventory button")
+    else:
+        await call.message.answer(msg.use_help)
+    await call.answer()
+
+@dp.message_handler(content_types=["any"])
+async def i_have_lapki(message: types.Message):
+   await message.answer(msg.use_help)
 
 if __name__ == '__main__':
     executor.start_polling(dp)
