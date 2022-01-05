@@ -11,7 +11,7 @@ class Plot():
         self._plot_location = plot_location
         self._current_chapter = cur_chapter
 
-    def _load_pr(self, number:int):
+    def _load_pr(self, number:str):
         try:
             self._paragraph = self._plot_location[self._current_chapter][f"Paragraph_{number}"]
         except KeyError:
@@ -19,9 +19,9 @@ class Plot():
         self._lenght = len(self._paragraph)
         self._texts, self._buttons = [], []
         for idx in range(1, self._lenght+1):
-            txt = self._paragraph.get([idx], False)
+            txt = self._paragraph[idx].get("Text", False)
             if not txt: continue
-            self._texts.append(self._paragraph.get([idx], False)
+            self._texts.append(txt)
             branch = self._paragraph[idx].get("Branch", False)
             if not branch:
                 self._buttons.append(branch)
@@ -29,9 +29,25 @@ class Plot():
             self._buttons.append(self._plot_location["Branching"][f"Paragraph_{number}"]["Buttons"]) # else
         return self._texts, self._buttons, self._lenght
 
-    async def print(self, what:str, callback:CallbackQuery, number:int=None):
+    async def print(self, what:str, callback:CallbackQuery, number:str="1", part:str=None, state:FSMContext=None):
         if what == "branching":
-            pass
+            try:
+                self._paragraph = self._plot_location[self._current_chapter][f"Paragraph_{number}"]
+            except KeyError:
+                raise KeyError(f"[ERROR] Can't find Paragraph_{number} in destination({self._plot_location})")
+
+            self._btns = self._plot_location["Branching"][f"Paragraph_{int(number)-1}"]["Buttons"]
+            self._btn_data = await state.get_data()
+            print(self._btns)
+            print(self._btn_data)
+            for idx in range(len(self._btns)):
+                self._btns[idx][2] = int(self._btn_data["cur_order"])
+                if self._btns[idx][0] ==  self._btn_data["button_txt"]:
+                    self._btns[idx][3] = True
+            self._txt = self._plot_location["Branching"][f"Paragraph_{int(number)-1}"]["Order"][self._btn_data["cur_order"]] + self._btn_data["button_txt"] + "\n"
+            self._txt += self._paragraph[part].get("Text", False)
+            await callback.message.answer(text=self._txt, parse_mode=ParseMode.MARKDOWN, reply_markup=get_paragraph_kb(self._btns))
+
         elif what == "paragraph":
             self._txt, self._buttons, self._paragraph_len = self._load_pr(number)
             for idx in range(0, self._paragraph_len):

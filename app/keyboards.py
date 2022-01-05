@@ -6,7 +6,7 @@ settings_cb = CallbackData("settings", "assign")
 inv_actions_cb = CallbackData("inv_actions", "inv_mes_id", "action", "slot_number")
 inv_slots_cb = CallbackData("inventory", "number")
 text_delay_cb = CallbackData("new_text_delay", "value")
-paragraph_cb = CallbackData("pr_keyboard", "point_to_pr", "point_to_part")
+paragraph_cb = CallbackData("pr_keyboard", "paragraph", "txt_key", "order")
 
 def get_start_inkb():
     start_inkb = InlineKeyboardMarkup().add(InlineKeyboardButton(text="Поехали!", callback_data="les_go"))
@@ -54,6 +54,7 @@ def get_text_delay_inkb():
 def get_paragraph_kb(buttons:list):
     pr_keyboard = InlineKeyboardMarkup(row_width=3)
     for idx in range(len(buttons)):
-        txt, point_to = buttons[idx]
-        pr_keyboard.insert(InlineKeyboardButton(text=txt, callback_data=paragraph_cb.new(point_to_pr=point_to[0], point_to_part=point_to[1])))
+        txt, point_to, order, is_used = buttons[idx]
+        if not is_used:
+            pr_keyboard.insert(InlineKeyboardButton(text=txt, callback_data=paragraph_cb.new(paragraph=point_to, txt_key=txt, order=order)))
     return pr_keyboard
