@@ -1,6 +1,6 @@
 from aiogram import Bot, types
 from aiogram.types import Message, ParseMode
-from aiogram.dispatcher import Dispatcher
+from aiogram.dispatcher import Dispatcher, FSMContext
 from aiogram.dispatcher.filters import Text
 from aiogram.contrib.fsm_storage.memory import MemoryStorage
 from aiogram.utils import executor
@@ -100,10 +100,14 @@ async def callback_les_go(call: types.CallbackQuery):
     await call.answer()
 
 @dp.callback_query_handler(kb.paragraph_cb.filter(), state=pl.Plot_Branch.waiting_for_choise)
-async def callback_paragraph_buttons(call: types.CallbackQuery, callback_data:dict):
-    point_to_pr = callback_data["point_to_pr"]
-    point_to_part = callback_data["point_to_part"]
-    pl.Plot
+async def callback_paragraph_buttons(call: types.CallbackQuery, callback_data:dict, state:FSMContext):
+    paragraph = callback_data["paragraph"]
+    txt_key = callback_data["txt_key"]
+    order = int(callback_data["order"])+1
+    await state.update_data(cur_order = order, button_txt=txt_key)
+    user = users[str(call.from_user.id)]
+    await pl.Plot(int(user['text_delay']), msg.plot, "Prologue").print("branching", call, number=paragraph, part=txt_key, state=state)
+
     await call.answer()
 
 @dp.callback_query_handler(kb.menu_cb.filter(), state="*")
