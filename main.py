@@ -35,8 +35,20 @@ else:
 async def save_json_file(data: dict):
     with open("users.json", "w", encoding="UTF-8") as file:
          json.dump(data, file, sort_keys=False, ensure_ascii=False)
+
+async def set_commands(bot: Bot):
+    commands = [
+        BotCommand(command="/start", description="Запустить бота"),
+        BotCommand(command="/help", description="Помощь"),
+        BotCommand(command="/menu", description="Открыть меню"),
+        BotCommand(command="/settings", description="Открыть настройки"),
+        BotCommand(command="/delay число(0-8)", description="Установить задержку появления текста"),
+        BotCommand(command="/rkm", description="Вернуть основную клавиатуру"),
+        BotCommand(command="/rm", description="Удалить основную клавиатуру"),
+        BotCommand(command="/inv", description="Открыть инвентарь")
+    ]
+    await bot.set_my_commands(commands)
 #Handlers
-@dp.message_handler(lambda message: message.text == "Меню", state="*")
 async def show_menu(message: types.Message):
     await message.answer(text(bold("Меню\n\n"), "Выберите действие:"), reply_markup=kb.get_menu_inkb(), parse_mode=ParseMode.MARKDOWN)
 
@@ -76,7 +88,6 @@ async def markup_main_kb(message: types.Message):
 async def remove_main_kb(message: types.Message):
     await message.reply(msg.rm, reply_markup=kb.ReplyKeyboardRemove())
 
-@dp.message_handler(commands=["delay"], state="*")
 async def change_text_delay(message: types.Message):
     argument = message.get_args()
     if not argument.isdigit() or int(argument) > 8 or int(argument) < 0:
@@ -86,6 +97,9 @@ async def change_text_delay(message: types.Message):
     await message.answer(text("Задержка появления текста теперь", bold(f"{argument}")), parse_mode=ParseMode.MARKDOWN)
 
 #Register handlers
+dp.register_message_handler(show_menu, Text(equals="Меню", ignore_case=True), state="*")
+dp.register_message_handler(show_menu, commands="/menu", state="*")
+dp.register_message_handler(change_text_delay, commands="/delay", state="*")
 dp.register_message_handler(show_inventory, commands="/inv", state="*")
 dp.register_message_handler(show_inventory, Text(equals="инвентарь", ignore_case=True), state="*")
 
