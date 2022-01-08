@@ -1,1 +1,2 @@
-token = "5066517208:AAE3zfYrCEIfZavnINbVDP8EjxqFEi8znNM"
+token = "5089262040:AAGCom3jcnGsPLadpMeuxl99wr4ANFsv1Gc"
+current_chapter = "Prologue"

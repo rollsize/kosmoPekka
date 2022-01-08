@@ -7,10 +7,10 @@ inv_actions_cb = CallbackData("inv_actions", "inv_mes_id", "action", "slot_numbe
 inv_slots_cb = CallbackData("inventory", "number")
 text_delay_cb = CallbackData("new_text_delay", "value")
 paragraph_cb = CallbackData("pr_keyboard", "paragraph", "txt_key", "order")
+continue_paragraph_cb = CallbackData("next_pr_button", "continue_paragraph")
 
 def get_start_inkb():
     start_inkb = InlineKeyboardMarkup().add(InlineKeyboardButton(text="Поехали!", callback_data="les_go"))
-
     return start_inkb
 
 def get_main_kb():
@@ -51,10 +51,16 @@ def get_text_delay_inkb():
         delay_inkb.insert(InlineKeyboardButton(text=idx, callback_data=text_delay_cb.new(value=idx)))
     return delay_inkb
 ####
-def get_paragraph_kb(buttons:list):
-    pr_keyboard = InlineKeyboardMarkup(row_width=3)
+def get_paragraph_branch_kb(buttons:list):
+    paragraph_branch = InlineKeyboardMarkup(row_width=3)
     for idx in range(len(buttons)):
         txt, point_to, order, is_used = buttons[idx]
         if not is_used:
-            pr_keyboard.insert(InlineKeyboardButton(text=txt, callback_data=paragraph_cb.new(paragraph=point_to, txt_key=txt, order=order)))
-    return pr_keyboard
+            paragraph_branch.insert(InlineKeyboardButton(text=txt, callback_data=paragraph_cb.new(paragraph=point_to, txt_key=txt, order=order)))
+    return paragraph_branch
+
+def get_paragraph_continue_kb(continue_paragraph:str):
+    continue_kb = InlineKeyboardMarkup()
+    continue_kb.add(InlineKeyboardButton(text="Продолжить", callback_data=continue_paragraph_cb.new(continue_paragraph=continue_paragraph)))
+
+    return continue_kb
