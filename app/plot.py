@@ -41,7 +41,6 @@ class Plot():
             self._btns_lenght = len(self._btns)
             self._btn_data = await state.get_data()
             self._current_order = int(self._btn_data["cur_order"])
-            print(self._btns_lenght, self._current_order)
             for idx in range(self._btns_lenght):
                 self._btns[idx][2] = self._current_order # set to all buttons current count of order
                 if self._btns[idx][0] ==  self._btn_data["button_txt"]: # If button were clicked
