@@ -9,7 +9,6 @@ from aiogram.utils.exceptions import MessageNotModified
 import asyncio
 import logging
 import os
-import random
 import json
 try:
     import app.config as cfg
@@ -36,25 +35,23 @@ else:
     print("[WARNING] Can't found users.json file in the directory. Created again.")
     save_json_file(users)
 #==== End ====
-# Commands
-async def compile_paragraph(user: dict, callback: types.CallbackQuery, paragraph_num:str = "1"):
 
+async def compile_paragraph(user: dict, callback: types.CallbackQuery, paragraph_num:str = "1"):
     paragraph = msg.plot[cfg.current_chapter][f"Paragraph_{paragraph_num}"]
     receive = None
     for elem in paragraph.keys():
         if type(elem) != int: continue
         receive = paragraph[elem].get("Receive", False)
-    #receive = None
-    #for idx in range(1, pr_lenght+1): 
-    #    receive = paragraph[idx].get("Receive", False) # If we have what receive to
+        break
     if receive:
         for idx in range(1, 6):
             if user["inventory"][str(idx)]: continue #if not empty - next
-            user["inventory"][str(idx)] = receive["Name"]
+            user["inventory"][str(idx)] = receive.get("Name", None)
+            break
         save_json_file(users)
     await pl.Plot(int(user["text_delay"]), msg.plot, cfg.current_chapter).print("paragraph", callback, pr_number=paragraph_num)
 #Handlers
-async def show_menu(message: types.Message):
+async def show_menu(message: Message):
     await message.answer(text(bold("Меню\n\n"), "Выберите действие:"), reply_markup=kb.get_menu_inkb(), parse_mode=ParseMode.MARKDOWN)
 
 async def show_inventory(message: Message):
@@ -68,35 +65,31 @@ async def show_inventory(message: Message):
     else:
         await message.answer("Твои карманы пока пусты")
 
-async def show_info(message: types.Message):
+async def show_info(message: Message):
     await message.answer(msg.info, parse_mode=ParseMode.MARKDOWN)
 
-@dp.message_handler(commands=["start"], state="*")
-async def start_message(message: types.Message):
+async def start_message(message: Message):
     await dp.bot.set_my_commands([types.BotCommand(command="/menu", description="Открыть меню"), types.BotCommand(command="/help", description="Помощь"),
         types.BotCommand(command="/settings", description="Открыть настройки"), types.BotCommand(command="/inv", description="Открыть инвентарь"), 
         types.BotCommand(command="/rm", description="Удалить основную клавиатуру"), types.BotCommand(command="/rkm", description="Вернуть основную клавиатуру"),
-        types.BotCommand(command="/delay", description="Установить задержку появления текста (/delay 0-8)")])
+        types.BotCommand(command="/delay", description="Установить задержку появления текста (/delay 0-8)")]) # set bot commands
     message_from = message.from_user
-    if not str(message_from.id) in users.keys():
+    if not str(message_from.id) in users.keys(): # if not exist
         users[str(message_from.id)] = {"first_name": message_from["first_name"], "last_name": message_from["last_name"], "inventory": {key: None for key in range(1, 6)},
-                                            "text_delay": 3}
+                                        "text_delay": 3}
         save_json_file(users)
     await message.answer(msg.first_message, reply_markup=kb.get_start_inkb(), parse_mode=ParseMode.MARKDOWN)
 
-@dp.message_handler(commands=["help"], state="*")
-async def help_message(message: types.Message):
+async def help_message(message: Message):
     await message.answer(msg.contact_us)
 
-@dp.message_handler(commands=["rkm"], state="*")
-async def markup_main_kb(message: types.Message):
+async def markup_main_kb(message: Message):
     await message.reply(msg.rkm, reply_markup=kb.get_main_kb())
 
-@dp.message_handler(commands=["rm"], state="*")
-async def remove_main_kb(message: types.Message):
+async def remove_main_kb(message: Message):
     await message.reply(msg.rm, reply_markup=kb.ReplyKeyboardRemove())
 
-async def change_text_delay(message: types.Message):
+async def change_text_delay(message: Message):
     argument = message.get_args()
     if not argument.isdigit() or int(argument) > 8 or int(argument) < 0:
         return await message.answer(text("Используйте команду /delay", bold("цифра") + "(0-8)"), parse_mode=ParseMode.MARKDOWN)
@@ -105,13 +98,17 @@ async def change_text_delay(message: types.Message):
     await message.answer(text("Задержка появления текста теперь", bold(f"{argument}")), parse_mode=ParseMode.MARKDOWN)
 
 #Register handlers
+dp.register_message_handler(start_message, commands="start", state="*")
 dp.register_message_handler(show_menu, Text(equals="Меню", ignore_case=True), state="*")
 dp.register_message_handler(show_menu, commands="menu", state="*")
+dp.register_message_handler(help_message, commands="help", state="*")
 dp.register_message_handler(show_inventory, Text(equals="инвентарь", ignore_case=True), state="*")
 dp.register_message_handler(show_inventory, commands="inv", state="*")
 dp.register_message_handler(change_text_delay, commands="delay", state="*")
 dp.register_message_handler(show_info, Text(equals="Инфо", ignore_case=True), state="*")
-dp.register_message_handler(show_inventory, commands="info", state="*")
+dp.register_message_handler(show_info, commands="info", state="*")
+dp.register_message_handler(markup_main_kb, commands="rkm", state="*")
+dp.register_message_handler(remove_main_kb, commands="rm", state="*")
 
 #Callbacks
 @dp.callback_query_handler(text="les_go", state="*")
@@ -120,7 +117,6 @@ async def callback_les_go(call: types.CallbackQuery):
     await call.message.answer(text="Приятного путешествия!", reply_markup=kb.get_main_kb())
     user = users[str(call.from_user.id)]
     await compile_paragraph(user, call)
-    #await pl.Plot(int(user['text_delay']), msg.plot, cfg.current_chapter).print("paragraph", call)
     await call.answer()
 
 @dp.callback_query_handler(kb.paragraph_cb.filter(), state="*") #state=pl.Plot_Branch.waiting_for_choise)
@@ -139,7 +135,6 @@ async def callback_continue_paragraph(call: types.CallbackQuery, callback_data:d
     paragraph = callback_data.get("continue_paragraph", 1)
     user = users[str(call.from_user.id)]
     await compile_paragraph(user, call, paragraph)
-    #await pl.Plot(int(user["text_delay"]), msg.plot, cfg.current_chapter).print("paragraph", call, pr_number = new_paragraph)
     await call.answer()
 
 
@@ -188,8 +183,8 @@ async def callback_settings(call: types.CallbackQuery, callback_data:dict):
     if assign == "text_delay":
         sms = text(bold(f"Задержка появления текста: {users[str(call.from_user.id)]['text_delay']}\n\n") + "Выберите новое значение")
         await bot.edit_message_text(chat_id=call.message.chat.id, message_id=call.message.message_id, text=sms, reply_markup=kb.get_text_delay_inkb(), parse_mode=ParseMode.MARKDOWN)
-    #elif assign == "settings_close":
-    #await bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup="")
+    elif assign == "settings_close":
+        await bot.edit_message_reply_markup(chat_id=call.message.chat.id, message_id=call.message.message_id, reply_markup="")
     await call.answer()
 
 @dp.callback_query_handler(kb.text_delay_cb.filter(), state="*")
@@ -202,7 +197,7 @@ async def callback_change_text_delay(call: types.CallbackQuery, callback_data:di
     await call.answer()
 
 @dp.message_handler(content_types=["any"], state="*")
-async def i_have_lapki(message: types.Message):
+async def i_have_lapki(message: Message):
     await message.answer(msg.use_help)
 
 @dp.errors_handler(exception=MessageNotModified)
